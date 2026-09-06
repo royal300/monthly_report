@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>royal300 Reports</title>
+<style>
+  :root {
+    --navy: #182848;
+    --accent: #0078d4;
+    --accent-dark: #005ea3;
+    --bg: #f5f7fa;
+    --card: #ffffff;
+    --text: #1a1a1a;
+    --muted: #6e6e6e;
+    --border: #e2e5eb;
+    --success: #1e8e3e;
+    --error: #c0392b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    padding: 32px;
+    width: 100%;
+    max-width: 420px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .brand-mark {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--navy), var(--accent));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  h1 {
+    font-size: 18px;
+    margin: 0;
+    color: var(--navy);
+  }
+  p.subtitle {
+    margin: 0 0 24px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--navy);
+  }
+  select, input[type="month"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 20px;
+    background: #fff;
+    color: var(--text);
+    font-family: inherit;
+  }
+  select:focus, input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,120,212,0.12);
+  }
+  button {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button:hover:not(:disabled) { background: var(--accent-dark); }
+  button:disabled { background: #a9c6e0; cursor: not-allowed; }
+  .status {
+    margin-top: 16px;
+    font-size: 13px;
+    text-align: center;
+    min-height: 18px;
+  }
+  .status.error { color: var(--error); }
+  .status.success { color: var(--success); }
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #cfe3f4;
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand">
+      <div class="brand-mark">R3</div>
+      <h1>royal300 Monthly Reports</h1>
+    </div>
+    <p class="subtitle">Pick a client and month, then generate and download the Meta performance PDF.</p>
+
+    <form id="reportForm">
+      <label for="client">Client Page</label>
+      <select id="client" name="client" required>
+        {% for c in clients %}
+        <option value="{{ c.key }}">{{ c.label }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="month">Report Month</label>
+      <input type="month" id="month" name="month" value="{{ default_month }}" required>
+
+      <button type="submit" id="submitBtn">Generate &amp; Download PDF</button>
+      <div class="status" id="status"></div>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('reportForm');
+    const btn = document.getElementById('submitBtn');
+    const status = document.getElementById('status');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      status.className = 'status';
+      status.innerHTML = '<span class="spinner"></span>Generating report...';
+      btn.disabled = true;
+
+      const formData = new FormData(form);
+      try {
+        const res = await fetch('/generate', { method: 'POST', body: formData });
+        if (!res.ok) {
+          let message = 'Failed to generate report.';
+          try {
+            const err = await res.json();
+            message = err.error || message;
+          } catch (_) {}
+          throw new Error(message);
+        }
+        const blob = await res.blob();
+        const disposition = res.headers.get('Content-Disposition') || '';
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        const filename = match ? match[1] : 'report.pdf';
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+
+        status.className = 'status success';
+        status.textContent = 'Downloaded: ' + filename;
+      } catch (err) {
+        status.className = 'status error';
+        status.textContent = err.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
