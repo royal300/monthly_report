@@ -3,252 +3,735 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>royal300 Monthly Reports</title>
+<title>royal300 — Executive Meta Performance Reports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --navy: #101b33;
-    --accent: #0078d4;
-    --accent-dark: #005ea3;
-    --bg: #f4f6fa;
-    --card: #ffffff;
-    --text: #1a202c;
-    --muted: #64748b;
-    --border: #e2e8f0;
-    --success: #16a34a;
-    --error: #dc2626;
+    --bg-base: #0a0e1a;
+    --bg-surface: #111827;
+    --bg-card: rgba(17, 24, 39, 0.82);
+    --bg-card-hover: rgba(24, 33, 53, 0.9);
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-accent: rgba(59, 130, 246, 0.35);
+    
+    --navy-900: #0b1120;
+    --blue-primary: #2563eb;
+    --blue-gradient: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #6366f1 100%);
+    --purple-gradient: linear-gradient(135deg, #7c3aed, #9333ea);
+    --emerald-primary: #10b981;
+    --rose-primary: #f43f5e;
+    
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
   }
-  * { box-sizing: border-box; }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
+    background-color: var(--bg-base);
+    background-image: 
+      radial-gradient(circle at 50% -20%, rgba(37, 99, 235, 0.22), transparent 55%),
+      radial-gradient(circle at 90% 70%, rgba(99, 102, 241, 0.12), transparent 45%),
+      radial-gradient(circle at 10% 90%, rgba(16, 185, 129, 0.08), transparent 40%),
+      linear-gradient(to right, rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+    color: var(--text-main);
+    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    min-height: 100vh;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
-    padding: 24px;
+    padding: 32px 16px;
   }
-  .card {
-    background: var(--card);
-    border-radius: 14px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.07);
-    padding: 36px;
+
+  /* Nav Header */
+  .top-bar {
     width: 100%;
-    max-width: 460px;
-    border: 1px solid var(--border);
+    max-width: 680px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 0 4px;
   }
-  .brand {
+  .brand-group {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 8px;
   }
-  .brand-mark {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, var(--navy), var(--accent));
+  .brand-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--blue-gradient);
     display: flex;
     align-items: center;
     justify-content: center;
     color: #fff;
-    font-weight: 700;
-    font-size: 15px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
     letter-spacing: -0.5px;
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.45);
   }
-  h1 {
-    font-size: 20px;
-    margin: 0;
-    color: var(--navy);
+  .brand-text h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.3px;
   }
-  p.subtitle {
-    margin: 0 0 24px;
-    color: var(--muted);
+  .brand-text p {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.2px;
+  }
+
+  .api-status {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(16, 185, 129, 0.09);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #34d399;
+  }
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: var(--emerald-primary);
+    box-shadow: 0 0 10px var(--emerald-primary);
+    animation: pulse 2s infinite ease-in-out;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+  }
+
+  /* Main Container Card */
+  .main-card {
+    width: 100%;
+    max-width: 680px;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-subtle);
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    padding: 36px;
+    position: relative;
+    overflow: hidden;
+  }
+  .main-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--blue-gradient);
+  }
+
+  .card-intro {
+    margin-bottom: 28px;
+  }
+  .card-intro h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .card-intro p {
     font-size: 13.5px;
-    line-height: 1.4;
+    color: var(--text-muted);
+    line-height: 1.5;
   }
-  .field-header {
+
+  /* Form Elements */
+  .form-group {
+    margin-bottom: 22px;
+  }
+  .label-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
-  label {
+  .label-row label {
     font-size: 13px;
     font-weight: 600;
-    color: var(--navy);
+    color: #e2e8f0;
+    letter-spacing: 0.1px;
   }
-  .refresh-btn {
+  .sync-btn {
     background: none;
     border: none;
-    color: var(--accent);
+    color: #60a5fa;
     font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    padding: 0;
-    text-decoration: underline;
-  }
-  select, input[type="month"] {
-    width: 100%;
-    padding: 11px 13px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 14px;
-    margin-bottom: 20px;
-    background: #fff;
-    color: var(--text);
-    font-family: inherit;
-    transition: border-color 0.15s, box-shadow 0.15s;
-  }
-  select:focus, input:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(0,120,212,0.12);
-  }
-  .submit-btn {
-    width: 100%;
-    padding: 13px;
-    background: var(--accent);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.15s;
+    font-family: inherit;
+  }
+  .sync-btn:hover { color: #93c5fd; text-decoration: underline; }
+
+  /* Client Selection Controls */
+  .search-wrap {
+    margin-bottom: 8px;
+    position: relative;
+  }
+  .search-input {
+    width: 100%;
+    padding: 10px 14px 10px 34px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.2s;
+  }
+  .search-input:focus {
+    border-color: #3b82f6;
+    background: rgba(15, 23, 42, 0.95);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    pointer-events: none;
+    font-size: 13px;
+  }
+
+  .custom-select {
+    width: 100%;
+    padding: 13px 14px;
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    color: #f8fafc;
+    font-size: 14.5px;
+    font-weight: 500;
+    font-family: inherit;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .custom-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+  }
+
+  /* Live Client Preview Box */
+  .client-preview {
+    margin-top: 10px;
+    padding: 12px 16px;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .client-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .client-name-display {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .client-id-display {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: monospace;
+  }
+  .client-badge {
+    background: rgba(37, 99, 235, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+    padding: 5px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* Month Preset Chips */
+  .month-control-wrap {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .month-input {
+    flex: 1;
+    padding: 11px 14px;
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    color: #f8fafc;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.2s;
+  }
+  .month-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+  }
+  .preset-chip {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 11px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .preset-chip:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Generate Button */
+  .btn-submit {
+    width: 100%;
+    padding: 16px;
+    background: var(--blue-gradient);
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.35);
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .btn-submit:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(37, 99, 235, 0.55);
+    filter: brightness(1.08);
+  }
+  .btn-submit:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Generation Progress Loader */
+  .progress-card {
+    display: none;
+    margin-top: 20px;
+    padding: 16px;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 12px;
+  }
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-bottom: 8px;
+  }
+  .progress-track {
+    height: 6px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--blue-gradient);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+  .progress-step {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Status Messages */
+  .status-banner {
+    margin-top: 18px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    display: none;
+    align-items: center;
     gap: 8px;
   }
-  .submit-btn:hover:not(:disabled) { background: var(--accent-dark); }
-  .submit-btn:disabled { background: #94a3b8; cursor: not-allowed; }
-  .features-pills {
+  .status-banner.success {
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #34d399;
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin: 20px 0 24px;
   }
-  .pill {
-    background: #f1f5f9;
-    color: #475569;
-    font-size: 11.5px;
-    padding: 4px 9px;
-    border-radius: 6px;
-    font-weight: 500;
+  .status-banner.error {
+    background: rgba(244, 63, 94, 0.12);
+    border: 1px solid rgba(244, 63, 94, 0.3);
+    color: #fb7185;
+    display: flex;
   }
-  .status {
-    margin-top: 16px;
+
+  /* Feature Badges Dock */
+  .feature-dock {
+    width: 100%;
+    max-width: 680px;
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 600px) {
+    .feature-dock { grid-template-columns: 1fr; }
+  }
+  .dock-card {
+    background: rgba(17, 24, 39, 0.6);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: border-color 0.2s;
+  }
+  .dock-card:hover {
+    border-color: rgba(255, 255, 255, 0.16);
+    background: rgba(17, 24, 39, 0.85);
+  }
+  .dock-icon {
+    font-size: 18px;
+    line-height: 1;
+    margin-top: 2px;
+  }
+  .dock-info h3 {
     font-size: 13px;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: 2px;
+  }
+  .dock-info p {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    line-height: 1.35;
+  }
+
+  /* Footer */
+  .app-footer {
+    margin-top: 28px;
+    font-size: 12px;
+    color: var(--text-dim);
     text-align: center;
-    min-height: 20px;
   }
-  .status.error { color: var(--error); font-weight: 500; }
-  .status.success { color: var(--success); font-weight: 500; }
-  .spinner {
-    display: inline-block;
-    width: 15px;
-    height: 15px;
-    border: 2px solid #e2e8f0;
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
-  <div class="card">
-    <div class="brand">
-      <div class="brand-mark">R3</div>
-      <h1>royal300 Monthly Reports</h1>
-    </div>
-    <p class="subtitle">Generate executive 2-page Meta performance reports with Month-over-Month comparisons and content breakdown.</p>
 
-    <div class="features-pills">
-      <span class="pill">Follower MoM</span>
-      <span class="pill">Views &amp; Reach</span>
-      <span class="pill">Reels vs Video vs Graphics</span>
-      <span class="pill">Top 5 Content</span>
-      <span class="pill">Executive 2-Page PDF</span>
+  <!-- Top Navigation Header -->
+  <header class="top-bar">
+    <div class="brand-group">
+      <div class="brand-logo">R3</div>
+      <div class="brand-text">
+        <h1>royal300</h1>
+        <p>Enterprise Meta Reporting Engine</p>
+      </div>
+    </div>
+    <div class="api-status">
+      <span class="status-dot"></span>
+      <span>Graph API v21.0 Live</span>
+    </div>
+  </header>
+
+  <!-- Main Action Console -->
+  <main class="main-card">
+    <div class="card-intro">
+      <h2>Generate Monthly Performance PDF</h2>
+      <p>Produces an executive 2-page deliverable featuring Month-over-Month growth, high-resolution Content Ratio Pie Charts, and Top 5 performing posts.</p>
     </div>
 
     <form id="reportForm">
-      <div class="field-header">
-        <label for="pageSelect">Client Facebook Page</label>
-        <button type="button" class="refresh-btn" id="refreshBtn">Refresh Pages</button>
+      <!-- Client Selector -->
+      <div class="form-group">
+        <div class="label-row">
+          <label for="pageSelect">Target Client Facebook Page</label>
+          <button type="button" class="sync-btn" id="syncBtn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+            Sync from Meta
+          </button>
+        </div>
+
+        <div class="search-wrap">
+          <span class="search-icon">&#128269;</span>
+          <input type="text" class="search-input" id="filterInput" placeholder="Quick search by client name...">
+        </div>
+
+        <select class="custom-select" id="pageSelect" name="page_id" required>
+          {% for p in pages %}
+          <option value="{{ p.page_id }}" data-name="{{ p.label }}" data-fans="{{ p.fans or 0 }}">
+            {{ p.label }} {% if p.fans %}&bull; {{ "{:,}".format(p.fans) }} followers{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+
+        <!-- Dynamic Client Preview Card -->
+        <div class="client-preview" id="clientPreview">
+          <div class="client-meta">
+            <span class="client-name-display" id="previewName">Loading...</span>
+            <span class="client-id-display" id="previewId">Page ID: --</span>
+          </div>
+          <span class="client-badge" id="previewFans">-- followers</span>
+        </div>
       </div>
-      <select id="pageSelect" name="page_id" required>
-        {% for p in pages %}
-        <option value="{{ p.page_id }}" data-fans="{{ p.fans }}">{{ p.label }}{% if p.fans %} ({{ "{:,}".format(p.fans) }} fans){% endif %}</option>
-        {% endfor %}
-      </select>
 
-      <label for="monthInput">Report Month</label>
-      <input type="month" id="monthInput" name="month" value="{{ default_month }}" required>
+      <!-- Month Selector -->
+      <div class="form-group">
+        <div class="label-row">
+          <label for="monthInput">Reporting Period</label>
+          <span style="font-size: 11.5px; color: var(--text-dim);">Auto-compares to prior month</span>
+        </div>
+        <div class="month-control-wrap">
+          <input type="month" class="month-input" id="monthInput" name="month" value="{{ default_month }}" required>
+          <button type="button" class="preset-chip" id="btnPrevMonth">Previous Month</button>
+        </div>
+      </div>
 
-      <button type="submit" class="submit-btn" id="submitBtn">
+      <!-- Submit Action -->
+      <button type="submit" class="btn-submit" id="submitBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
         <span id="btnText">Generate &amp; Download 2-Page PDF</span>
       </button>
-      <div class="status" id="status"></div>
+
+      <!-- Multi-Step Animated Progress Loader -->
+      <div class="progress-card" id="progressCard">
+        <div class="progress-header">
+          <span>Processing Analytics</span>
+          <span id="progressPct">15%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-step" id="progressStep">Connecting to Meta Graph API v21.0...</div>
+      </div>
+
+      <!-- Status Banner -->
+      <div class="status-banner" id="statusBanner"></div>
     </form>
-  </div>
+  </main>
+
+  <!-- Feature Grid Showcase -->
+  <section class="feature-dock">
+    <div class="dock-card">
+      <div class="dock-icon">📈</div>
+      <div class="dock-info">
+        <h3>MoM Growth Engine</h3>
+        <p>Month-over-Month calculation of follower gains, reach, and interaction deltas.</p>
+      </div>
+    </div>
+    <div class="dock-card">
+      <div class="dock-icon">🍩</div>
+      <div class="dock-info">
+        <h3>Content Ratio Pie Chart</h3>
+        <p>Embedded high-DPI donut chart of Reels vs Long Videos vs Graphics.</p>
+      </div>
+    </div>
+    <div class="dock-card">
+      <div class="dock-icon">🏆</div>
+      <div class="dock-info">
+        <h3>Top 5 Content Deep-Dive</h3>
+        <p>Automated ranking by impressions with post badges and interaction counts.</p>
+      </div>
+    </div>
+    <div class="dock-card">
+      <div class="dock-icon">🎯</div>
+      <div class="dock-info">
+        <h3>Algorithmic Strategy</h3>
+        <p>Tailored strategic guidance formulated from high-performing content formats.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="app-footer">
+    &copy; 2026 royal300 Agency Suite &bull; Secured with Meta System User Token
+  </footer>
 
   <script>
     const form = document.getElementById('reportForm');
-    const btn = document.getElementById('submitBtn');
+    const select = document.getElementById('pageSelect');
+    const filterInput = document.getElementById('filterInput');
+    const syncBtn = document.getElementById('syncBtn');
+    const submitBtn = document.getElementById('submitBtn');
     const btnText = document.getElementById('btnText');
-    const status = document.getElementById('status');
-    const refreshBtn = document.getElementById('refreshBtn');
-    const pageSelect = document.getElementById('pageSelect');
+    const progressCard = document.getElementById('progressCard');
+    const progressFill = document.getElementById('progressFill');
+    const progressPct = document.getElementById('progressPct');
+    const progressStep = document.getElementById('progressStep');
+    const statusBanner = document.getElementById('statusBanner');
+    const monthInput = document.getElementById('monthInput');
+    const btnPrevMonth = document.getElementById('btnPrevMonth');
 
-    refreshBtn.addEventListener('click', async () => {
-      refreshBtn.textContent = 'Syncing...';
+    const previewName = document.getElementById('previewName');
+    const previewId = document.getElementById('previewId');
+    const previewFans = document.getElementById('previewFans');
+
+    // Update Client Preview Box
+    function updatePreview() {
+      const opt = select.options[select.selectedIndex];
+      if (opt) {
+        previewName.textContent = opt.getAttribute('data-name') || opt.text.split('•')[0].trim();
+        previewId.textContent = 'Page ID: ' + opt.value;
+        const fans = Number(opt.getAttribute('data-fans') || 0);
+        previewFans.textContent = fans > 0 ? fans.toLocaleString() + ' followers' : 'Page Active';
+      }
+    }
+    select.addEventListener('change', updatePreview);
+    updatePreview();
+
+    // Quick Search Filter for Client Dropdown
+    filterInput.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      let firstVisible = null;
+      for (let i = 0; i < select.options.length; i++) {
+        const text = select.options[i].text.toLowerCase();
+        const match = text.includes(q);
+        select.options[i].style.display = match ? '' : 'none';
+        if (match && !firstVisible) firstVisible = select.options[i];
+      }
+      if (firstVisible && !select.options[select.selectedIndex].text.toLowerCase().includes(q)) {
+        select.value = firstVisible.value;
+        updatePreview();
+      }
+    });
+
+    // Preset Chip (Previous Month)
+    btnPrevMonth.addEventListener('click', () => {
+      const now = new Date();
+      now.setMonth(now.getMonth() - 1);
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      monthInput.value = `${y}-${m}`;
+    });
+
+    // Sync Pages from Meta Business Suite
+    syncBtn.addEventListener('click', async () => {
+      syncBtn.textContent = 'Syncing...';
       try {
         const res = await fetch('/api/pages');
         const data = await res.json();
         if (data.pages && data.pages.length) {
-          pageSelect.innerHTML = '';
+          select.innerHTML = '';
           data.pages.forEach(p => {
             const opt = document.createElement('option');
             opt.value = p.page_id;
-            opt.textContent = p.label + (p.fans ? ` (${Number(p.fans).toLocaleString()} fans)` : '');
-            pageSelect.appendChild(opt);
+            opt.setAttribute('data-name', p.label);
+            opt.setAttribute('data-fans', p.fans || 0);
+            opt.textContent = `${p.label} ${p.fans ? '• ' + Number(p.fans).toLocaleString() + ' followers' : ''}`;
+            select.appendChild(opt);
           });
-          status.className = 'status success';
-          status.textContent = `Synced ${data.pages.length} pages from Meta Business!`;
+          updatePreview();
+          showStatus(`Synced ${data.pages.length} client pages from Meta Business!`, 'success');
         }
-      } catch (e) {
-        status.className = 'status error';
-        status.textContent = 'Could not refresh pages: ' + e.message;
+      } catch (err) {
+        showStatus('Could not sync pages: ' + err.message, 'error');
       } finally {
-        refreshBtn.textContent = 'Refresh Pages';
+        syncBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg> Sync from Meta';
       }
     });
 
+    function showStatus(msg, type) {
+      statusBanner.className = 'status-banner ' + type;
+      statusBanner.textContent = msg;
+      statusBanner.style.display = 'flex';
+    }
+
+    // Form Submit with Multi-Phase Progress
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      status.className = 'status';
-      status.textContent = '';
-      btnText.innerHTML = '<span class="spinner"></span> Analyzing 30-day Facebook record...';
-      btn.disabled = true;
+      statusBanner.style.display = 'none';
+      submitBtn.disabled = true;
+      progressCard.style.display = 'block';
+
+      // Simulation steps while server processes both months
+      const steps = [
+        { pct: 20, text: 'Authenticating with Meta Graph API v21.0...' },
+        { pct: 45, text: 'Fetching posts, reels & interaction metrics...' },
+        { pct: 70, text: 'Analyzing Month-over-Month growth & deltas...' },
+        { pct: 90, text: 'Generating Donut Pie Chart & 2-page PDF...' }
+      ];
+
+      let stepIdx = 0;
+      progressFill.style.width = '15%';
+      progressPct.textContent = '15%';
+      progressStep.textContent = steps[0].text;
+
+      const progressInterval = setInterval(() => {
+        if (stepIdx < steps.length - 1) {
+          stepIdx++;
+          progressFill.style.width = steps[stepIdx].pct + '%';
+          progressPct.textContent = steps[stepIdx].pct + '%';
+          progressStep.textContent = steps[stepIdx].text;
+        }
+      }, 1500);
 
       const formData = new FormData(form);
       try {
         const res = await fetch('/generate', { method: 'POST', body: formData });
+        clearInterval(progressInterval);
+
         if (!res.ok) {
-          let message = 'Failed to generate report.';
+          let errText = 'Failed to generate report.';
           try {
-            const err = await res.json();
-            message = err.error || message;
+            const errJson = await res.json();
+            errText = errJson.error || errText;
           } catch (_) {}
-          throw new Error(message);
+          throw new Error(errText);
         }
+
+        progressFill.style.width = '100%';
+        progressPct.textContent = '100%';
+        progressStep.textContent = 'Report rendered successfully! Downloading...';
+
         const blob = await res.blob();
         const disposition = res.headers.get('Content-Disposition') || '';
         const match = disposition.match(/filename="?([^"]+)"?/);
-        const filename = match ? match[1] : 'report.pdf';
+        const filename = match ? match[1] : 'monthly_report.pdf';
 
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -259,14 +742,15 @@
         a.remove();
         window.URL.revokeObjectURL(url);
 
-        status.className = 'status success';
-        status.textContent = 'Report downloaded: ' + filename;
+        showStatus(`Downloaded: ${filename} (2-page PDF with Pie Chart)`, 'success');
       } catch (err) {
-        status.className = 'status error';
-        status.textContent = err.message;
+        clearInterval(progressInterval);
+        showStatus(err.message, 'error');
       } finally {
-        btnText.textContent = 'Generate & Download 2-Page PDF';
-        btn.disabled = false;
+        setTimeout(() => {
+          progressCard.style.display = 'none';
+          submitBtn.disabled = false;
+        }, 1200);
       }
     });
   </script>
