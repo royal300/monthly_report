@@ -3,19 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>royal300 Reports</title>
+<title>royal300 Monthly Reports</title>
 <style>
   :root {
-    --navy: #182848;
+    --navy: #101b33;
     --accent: #0078d4;
     --accent-dark: #005ea3;
-    --bg: #f5f7fa;
+    --bg: #f4f6fa;
     --card: #ffffff;
-    --text: #1a1a1a;
-    --muted: #6e6e6e;
-    --border: #e2e5eb;
-    --success: #1e8e3e;
-    --error: #c0392b;
+    --text: #1a202c;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --success: #16a34a;
+    --error: #dc2626;
   }
   * { box-sizing: border-box; }
   body {
@@ -31,50 +31,67 @@
   }
   .card {
     background: var(--card);
-    border-radius: 12px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
-    padding: 32px;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.07);
+    padding: 36px;
     width: 100%;
-    max-width: 420px;
+    max-width: 460px;
+    border: 1px solid var(--border);
   }
   .brand {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 12px;
+    margin-bottom: 8px;
   }
   .brand-mark {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
     background: linear-gradient(135deg, var(--navy), var(--accent));
     display: flex;
     align-items: center;
     justify-content: center;
     color: #fff;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 15px;
+    letter-spacing: -0.5px;
   }
   h1 {
-    font-size: 18px;
+    font-size: 20px;
     margin: 0;
     color: var(--navy);
   }
   p.subtitle {
     margin: 0 0 24px;
     color: var(--muted);
-    font-size: 13px;
+    font-size: 13.5px;
+    line-height: 1.4;
+  }
+  .field-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
   }
   label {
-    display: block;
     font-size: 13px;
     font-weight: 600;
-    margin-bottom: 6px;
     color: var(--navy);
+  }
+  .refresh-btn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
   }
   select, input[type="month"] {
     width: 100%;
-    padding: 10px 12px;
+    padding: 11px 13px;
     border: 1px solid var(--border);
     border-radius: 8px;
     font-size: 14px;
@@ -82,15 +99,16 @@
     background: #fff;
     color: var(--text);
     font-family: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
   }
   select:focus, input:focus {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(0,120,212,0.12);
   }
-  button {
+  .submit-btn {
     width: 100%;
-    padding: 12px;
+    padding: 13px;
     background: var(--accent);
     color: white;
     border: none;
@@ -99,27 +117,43 @@
     font-weight: 600;
     cursor: pointer;
     transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
   }
-  button:hover:not(:disabled) { background: var(--accent-dark); }
-  button:disabled { background: #a9c6e0; cursor: not-allowed; }
+  .submit-btn:hover:not(:disabled) { background: var(--accent-dark); }
+  .submit-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+  .features-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 20px 0 24px;
+  }
+  .pill {
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 11.5px;
+    padding: 4px 9px;
+    border-radius: 6px;
+    font-weight: 500;
+  }
   .status {
     margin-top: 16px;
     font-size: 13px;
     text-align: center;
-    min-height: 18px;
+    min-height: 20px;
   }
-  .status.error { color: var(--error); }
-  .status.success { color: var(--success); }
+  .status.error { color: var(--error); font-weight: 500; }
+  .status.success { color: var(--success); font-weight: 500; }
   .spinner {
     display: inline-block;
-    width: 14px;
-    height: 14px;
-    border: 2px solid #cfe3f4;
-    border-top-color: var(--accent);
+    width: 15px;
+    height: 15px;
+    border: 2px solid #e2e8f0;
+    border-top-color: #fff;
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
-    vertical-align: middle;
-    margin-right: 6px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
@@ -130,20 +164,33 @@
       <div class="brand-mark">R3</div>
       <h1>royal300 Monthly Reports</h1>
     </div>
-    <p class="subtitle">Pick a client and month, then generate and download the Meta performance PDF.</p>
+    <p class="subtitle">Generate executive 2-page Meta performance reports with Month-over-Month comparisons and content breakdown.</p>
+
+    <div class="features-pills">
+      <span class="pill">Follower MoM</span>
+      <span class="pill">Views &amp; Reach</span>
+      <span class="pill">Reels vs Video vs Graphics</span>
+      <span class="pill">Top 5 Content</span>
+      <span class="pill">Executive 2-Page PDF</span>
+    </div>
 
     <form id="reportForm">
-      <label for="client">Client Page</label>
-      <select id="client" name="client" required>
-        {% for c in clients %}
-        <option value="{{ c.key }}">{{ c.label }}</option>
+      <div class="field-header">
+        <label for="pageSelect">Client Facebook Page</label>
+        <button type="button" class="refresh-btn" id="refreshBtn">Refresh Pages</button>
+      </div>
+      <select id="pageSelect" name="page_id" required>
+        {% for p in pages %}
+        <option value="{{ p.page_id }}" data-fans="{{ p.fans }}">{{ p.label }}{% if p.fans %} ({{ "{:,}".format(p.fans) }} fans){% endif %}</option>
         {% endfor %}
       </select>
 
-      <label for="month">Report Month</label>
-      <input type="month" id="month" name="month" value="{{ default_month }}" required>
+      <label for="monthInput">Report Month</label>
+      <input type="month" id="monthInput" name="month" value="{{ default_month }}" required>
 
-      <button type="submit" id="submitBtn">Generate &amp; Download PDF</button>
+      <button type="submit" class="submit-btn" id="submitBtn">
+        <span id="btnText">Generate &amp; Download 2-Page PDF</span>
+      </button>
       <div class="status" id="status"></div>
     </form>
   </div>
@@ -151,12 +198,40 @@
   <script>
     const form = document.getElementById('reportForm');
     const btn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('btnText');
     const status = document.getElementById('status');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const pageSelect = document.getElementById('pageSelect');
+
+    refreshBtn.addEventListener('click', async () => {
+      refreshBtn.textContent = 'Syncing...';
+      try {
+        const res = await fetch('/api/pages');
+        const data = await res.json();
+        if (data.pages && data.pages.length) {
+          pageSelect.innerHTML = '';
+          data.pages.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.page_id;
+            opt.textContent = p.label + (p.fans ? ` (${Number(p.fans).toLocaleString()} fans)` : '');
+            pageSelect.appendChild(opt);
+          });
+          status.className = 'status success';
+          status.textContent = `Synced ${data.pages.length} pages from Meta Business!`;
+        }
+      } catch (e) {
+        status.className = 'status error';
+        status.textContent = 'Could not refresh pages: ' + e.message;
+      } finally {
+        refreshBtn.textContent = 'Refresh Pages';
+      }
+    });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       status.className = 'status';
-      status.innerHTML = '<span class="spinner"></span>Generating report...';
+      status.textContent = '';
+      btnText.innerHTML = '<span class="spinner"></span> Analyzing 30-day Facebook record...';
       btn.disabled = true;
 
       const formData = new FormData(form);
@@ -185,11 +260,12 @@
         window.URL.revokeObjectURL(url);
 
         status.className = 'status success';
-        status.textContent = 'Downloaded: ' + filename;
+        status.textContent = 'Report downloaded: ' + filename;
       } catch (err) {
         status.className = 'status error';
         status.textContent = err.message;
       } finally {
+        btnText.textContent = 'Generate & Download 2-Page PDF';
         btn.disabled = false;
       }
     });

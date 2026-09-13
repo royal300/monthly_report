@@ -27,10 +27,23 @@ def month_range(month_str: str) -> tuple[str, str]:
     return since.isoformat(), until.isoformat()
 
 
+def get_prior_month_range(since_iso: str) -> tuple[str, str]:
+    """Given a YYYY-MM-DD start date, returns (since, until) for the immediate preceding calendar month."""
+    year, month = int(since_iso[:4]), int(since_iso[5:7])
+    if month == 1:
+        prev_year = year - 1
+        prev_month = 12
+    else:
+        prev_year = year
+        prev_month = month - 1
+    return month_range(f"{prev_year:04d}-{prev_month:02d}")
+
+
 def generate_report(page_id: str, page_name: str, client_name: str | None = None,
                      ad_account_id: str | None = None, month: str | None = None) -> Path:
-    """Runs the full pipeline (fetch -> aggregate -> render PDF) and returns the output path."""
+    """Runs the full pipeline (fetch -> MoM aggregate -> render PDF) and returns the output path."""
     since, until = month_range(month) if month else previous_month_range()
+    prev_since, prev_until = get_prior_month_range(since)
 
     client = GraphAPIClient()
 
@@ -40,6 +53,8 @@ def generate_report(page_id: str, page_name: str, client_name: str | None = None
     page_client = GraphAPIClient(token=page_token)
 
     page_info = page_client.get_page_info(page_id)
+
+    # Fetch current period
     insights_payload = page_client.get_page_insights(page_id, since, until)
     posts = page_client.get_page_posts_with_insights(page_id, since, until)
 
@@ -53,12 +68,33 @@ def generate_report(page_id: str, page_name: str, client_name: str | None = None
         until=until,
     )
 
+    # Fetch previous period for Month-over-Month (MoM) comparison
+    try:
+        prev_insights = page_client.get_page_insights(page_id, prev_since, prev_until)
+        prev_posts = page_client.get_page_posts_with_insights(page_id, prev_since, prev_until)
+        prev_report = build_page_report(
+            page_id=page_id,
+            page_name=page_name,
+            page_info=page_info,
+            insights_payload=prev_insights,
+            posts=prev_posts,
+            since=prev_since,
+            until=prev_until,
+        )
+        report.previous_period = prev_report
+    except Exception as e:
+        print(f"Warning: could not fetch previous month ({prev_since} to {prev_until}): {e}")
+
     ad_report = None
     if ad_account_id:
-        ad_rows = client.get_ad_account_insights(ad_account_id, since, until)
-        ad_report = build_ad_account_report(ad_account_id, page_name, ad_rows)
+        try:
+            ad_rows = client.get_ad_account_insights(ad_account_id, since, until)
+            ad_report = build_ad_account_report(ad_account_id, page_name, ad_rows)
+        except Exception as e:
+            print(f"Warning: ad account insights failed for {ad_account_id}: {e}")
 
-    safe_name = page_name.replace(" ", "_")
+    safe_name = page_name.replace(" ", "_").replace("&", "and")
+    safe_name = "".join(c for c in safe_name if c.isalnum() or c in ("_", "-"))
     output_path = OUTPUT_DIR / f"{safe_name}_{since}_to_{until}.pdf"
     render_report(report, output_path, ad_report=ad_report, client_display_name=client_name)
     return output_path

@@ -12,56 +12,72 @@ from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_file
 
+from graph_api import GraphAPIClient
 from report_service import generate_report, previous_month_range
 
 app = Flask(__name__)
 
-# Known clients (from `python src/list_assets.py`). Add more here as the
-# system user is assigned to additional Pages/ad accounts.
-CLIENTS = [
-    {
-        "key": "royal300",
-        "label": "ROYAL 300",
-        "page_id": "105034859277727",
-        "ad_account_id": "act_690294929258317",
-    },
-    {
-        "key": "happyvalley",
-        "label": "Happy Valley Park",
-        "page_id": "127586478173741",
-        "ad_account_id": None,
-    },
-    {
-        "key": "floriza",
-        "label": "Floriza - Skin & Hair Clinic",
-        "page_id": "1149414344915545",
-        "ad_account_id": None,
-    },
-]
-CLIENTS_BY_KEY = {c["key"]: c for c in CLIENTS}
+
+def load_available_pages() -> list[dict]:
+    """Dynamically queries Meta Graph API for all pages assigned to this system user."""
+    try:
+        client = GraphAPIClient()
+        raw_pages = client.list_assigned_pages()
+        if raw_pages:
+            return [
+                {
+                    "page_id": str(p["id"]),
+                    "label": p.get("name", "Unnamed Page"),
+                    "fans": p.get("fan_count", 0),
+                }
+                for p in raw_pages
+            ]
+    except Exception as e:
+        print(f"Notice: Failed to fetch live pages ({e}), falling back to cache.")
+
+    return [
+        {"page_id": "127586478173741", "label": "Happy Valley Park", "fans": 48733},
+        {"page_id": "1149414344915545", "label": "Floriza - Skin & Hair Clinic", "fans": 70},
+        {"page_id": "105034859277727", "label": "ROYAL 300", "fans": 28},
+    ]
 
 
 @app.route("/")
 def index():
+    pages = load_available_pages()
     default_since, _ = previous_month_range()
     default_month = default_since[:7]  # YYYY-MM
-    return render_template("index.html", clients=CLIENTS, default_month=default_month)
+    return render_template("index.html", pages=pages, default_month=default_month)
+
+
+@app.route("/api/pages")
+def api_pages():
+    pages = load_available_pages()
+    return jsonify({"pages": pages})
 
 
 @app.route("/generate", methods=["POST"])
 def generate():
-    key = request.form.get("client")
+    page_id = request.form.get("page_id") or request.form.get("client")
     month = request.form.get("month") or None
-    client = CLIENTS_BY_KEY.get(key)
-    if not client:
-        return jsonify({"error": "Unknown client selected."}), 400
+    page_name = request.form.get("page_name")
+
+    if not page_id:
+        return jsonify({"error": "No page selected."}), 400
+
+    pages = load_available_pages()
+    matched = next((p for p in pages if p["page_id"] == str(page_id)), None)
+    if matched:
+        page_name = matched["label"]
+    elif not page_name:
+        page_name = f"Page_{page_id}"
 
     try:
         pdf_path: Path = generate_report(
-            page_id=client["page_id"],
-            page_name=client["label"],
-            client_name=client["label"],
-            ad_account_id=client.get("ad_account_id"),
+            page_id=str(page_id),
+            page_name=page_name,
+            client_name=page_name,
+            ad_account_id=None,  # As requested, ads are omitted/not needed
             month=month,
         )
     except Exception as e:

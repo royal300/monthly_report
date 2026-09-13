@@ -89,6 +89,7 @@ class GraphAPIClient:
         metrics = ",".join([
             "page_follows",
             "page_total_media_view_unique",
+            "page_post_engagements",
         ])
         return self._get(
             f"{page_id}/insights",
@@ -100,39 +101,48 @@ class GraphAPIClient:
             },
         )
 
-    def get_page_posts_with_insights(self, page_id: str, since: str, until: str, limit: int = 50) -> list[dict]:
+    def get_page_posts_with_insights(self, page_id: str, since: str, until: str, limit: int = 20) -> list[dict]:
         """Returns posts in [since, until] with views/reactions/comments/shares attached.
-
-        post_impressions/post_engaged_users are deprecated; post_media_view is the
-        current "views" metric. Engagement (reactions/comments/shares) now comes from
-        their own edges rather than an insights metric.
+        Uses adaptive batching (default limit=20) to prevent Meta Graph API complexity limits.
         """
-        data = self._get(
-            f"{page_id}/posts",
-            {
-                "fields": (
-                    "id,message,created_time,permalink_url,"
-                    "insights.metric(post_media_view),"
-                    "reactions.summary(true).limit(0),"
-                    "comments.summary(true).limit(0),"
-                    "shares"
-                ),
-                "since": since,
-                "until": until,
-                "limit": limit,
-            },
-        )
+        params = {
+            "fields": (
+                "id,message,created_time,permalink_url,status_type,"
+                "attachments{media_type,type,url},"
+                "insights.metric(post_media_view),"
+                "reactions.summary(true).limit(0),"
+                "comments.summary(true).limit(0),"
+                "shares"
+            ),
+            "since": since,
+            "until": until,
+            "limit": limit,
+        }
+
+        try:
+            data = self._get(f"{page_id}/posts", params)
+        except GraphAPIError as e:
+            # If Meta asks to reduce the amount of data, automatically retry with limit=10
+            if "reduce the amount of data" in str(e).lower() and limit > 10:
+                params["limit"] = 10
+                data = self._get(f"{page_id}/posts", params)
+            else:
+                raise
+
         posts = data.get("data", [])
 
-        # Follow pagination if present, capped to avoid runaway calls
+        # Follow pagination if present, capped to avoid runaway calls (up to 10 pages)
         next_url = data.get("paging", {}).get("next")
         pages_fetched = 1
-        while next_url and pages_fetched < 5:
+        while next_url and pages_fetched < 10:
             resp = self.session.get(next_url, timeout=30)
-            page_data = resp.json()
-            posts.extend(page_data.get("data", []))
-            next_url = page_data.get("paging", {}).get("next")
-            pages_fetched += 1
+            if resp.status_code == 200:
+                page_data = resp.json()
+                posts.extend(page_data.get("data", []))
+                next_url = page_data.get("paging", {}).get("next")
+                pages_fetched += 1
+            else:
+                break
 
         return posts
 
