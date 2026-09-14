@@ -342,9 +342,22 @@
     filter: brightness(1.08);
   }
   .btn-submit:disabled {
-    opacity: 0.65;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-dim);
+    box-shadow: none;
     cursor: not-allowed;
     transform: none;
+    filter: none;
+    opacity: 0.65;
+  }
+
+  .helper-note {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-dim);
+    text-align: center;
+    transition: opacity 0.2s;
   }
 
   /* Generation Progress Loader */
@@ -504,6 +517,7 @@
         </div>
 
         <select class="custom-select" id="pageSelect" name="page_id" required>
+          <option value="" disabled selected>-- Select a Client Facebook Page --</option>
           {% for p in pages %}
           <option value="{{ p.page_id }}" data-name="{{ p.label }}" data-fans="{{ p.fans or 0 }}">
             {{ p.label }} {% if p.fans %}&bull; {{ "{:,}".format(p.fans) }} followers{% endif %}
@@ -514,10 +528,10 @@
         <!-- Dynamic Client Preview Card -->
         <div class="client-preview" id="clientPreview">
           <div class="client-meta">
-            <span class="client-name-display" id="previewName">Loading...</span>
-            <span class="client-id-display" id="previewId">Page ID: --</span>
+            <span class="client-name-display" id="previewName">No client selected</span>
+            <span class="client-id-display" id="previewId">Select a page above</span>
           </div>
-          <span class="client-badge" id="previewFans">-- followers</span>
+          <span class="client-badge" id="previewFans">Awaiting selection</span>
         </div>
       </div>
 
@@ -528,16 +542,17 @@
           <span style="font-size: 11.5px; color: var(--text-dim);">Auto-compares to prior month</span>
         </div>
         <div class="month-control-wrap">
-          <input type="month" class="month-input" id="monthInput" name="month" value="{{ default_month }}" required>
+          <input type="month" class="month-input" id="monthInput" name="month" value="" required>
           <button type="button" class="preset-chip" id="btnPrevMonth">Previous Month</button>
         </div>
       </div>
 
       <!-- Submit Action -->
-      <button type="submit" class="btn-submit" id="submitBtn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-        <span id="btnText">Generate &amp; Download 2-Page PDF</span>
+      <button type="submit" class="btn-submit" id="submitBtn" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span id="btnText">Select Client &amp; Month to Download</span>
       </button>
+      <div class="helper-note" id="helperNote">Please select both a client page and a reporting month to enable download.</div>
 
       <!-- Multi-Step Animated Progress Loader -->
       <div class="progress-card" id="progressCard">
@@ -610,33 +625,74 @@
     const previewName = document.getElementById('previewName');
     const previewId = document.getElementById('previewId');
     const previewFans = document.getElementById('previewFans');
+    const helperNote = document.getElementById('helperNote');
+
+    // Form Validation (Enable button only when BOTH client and month are selected)
+    function validateForm() {
+      const hasClient = Boolean(select.value && select.value !== '');
+      const hasMonth = Boolean(monthInput.value && monthInput.value.trim() !== '');
+
+      if (hasClient && hasMonth) {
+        submitBtn.disabled = false;
+        btnText.innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          <span>Generate &amp; Download 2-Page PDF</span>
+        `;
+        if (helperNote) helperNote.style.display = 'none';
+      } else {
+        submitBtn.disabled = true;
+        let missing = [];
+        if (!hasClient) missing.push("Client Page");
+        if (!hasMonth) missing.push("Reporting Month");
+        btnText.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span>Select ${missing.join(' & ')} to Download</span>
+        `;
+        if (helperNote) {
+          helperNote.textContent = `Please select both a client page and a reporting month to enable download.`;
+          helperNote.style.display = 'block';
+        }
+      }
+    }
 
     // Update Client Preview Box
     function updatePreview() {
       const opt = select.options[select.selectedIndex];
-      if (opt) {
+      if (opt && opt.value) {
         previewName.textContent = opt.getAttribute('data-name') || opt.text.split('•')[0].trim();
         previewId.textContent = 'Page ID: ' + opt.value;
         const fans = Number(opt.getAttribute('data-fans') || 0);
         previewFans.textContent = fans > 0 ? fans.toLocaleString() + ' followers' : 'Page Active';
+      } else {
+        previewName.textContent = 'No client selected';
+        previewId.textContent = 'Select a page above';
+        previewFans.textContent = 'Awaiting selection';
       }
     }
-    select.addEventListener('change', updatePreview);
+    select.addEventListener('change', () => {
+      updatePreview();
+      validateForm();
+    });
+    monthInput.addEventListener('input', validateForm);
+    monthInput.addEventListener('change', validateForm);
     updatePreview();
+    validateForm();
 
     // Quick Search Filter for Client Dropdown
     filterInput.addEventListener('input', (e) => {
       const q = e.target.value.toLowerCase().trim();
       let firstVisible = null;
       for (let i = 0; i < select.options.length; i++) {
+        if (!select.options[i].value) continue; // skip placeholder
         const text = select.options[i].text.toLowerCase();
         const match = text.includes(q);
         select.options[i].style.display = match ? '' : 'none';
         if (match && !firstVisible) firstVisible = select.options[i];
       }
-      if (firstVisible && !select.options[select.selectedIndex].text.toLowerCase().includes(q)) {
+      if (firstVisible && (!select.options[select.selectedIndex] || !select.options[select.selectedIndex].text.toLowerCase().includes(q))) {
         select.value = firstVisible.value;
         updatePreview();
+        validateForm();
       }
     });
 
@@ -647,6 +703,7 @@
       const y = now.getFullYear();
       const m = String(now.getMonth() + 1).padStart(2, '0');
       monthInput.value = `${y}-${m}`;
+      validateForm();
     });
 
     // Sync Pages from Meta Business Suite
@@ -656,7 +713,7 @@
         const res = await fetch('/api/pages');
         const data = await res.json();
         if (data.pages && data.pages.length) {
-          select.innerHTML = '';
+          select.innerHTML = '<option value="" disabled selected>-- Select a Client Facebook Page --</option>';
           data.pages.forEach(p => {
             const opt = document.createElement('option');
             opt.value = p.page_id;
@@ -666,6 +723,7 @@
             select.appendChild(opt);
           });
           updatePreview();
+          validateForm();
           showStatus(`Synced ${data.pages.length} client pages from Meta Business!`, 'success');
         }
       } catch (err) {
