@@ -144,6 +144,101 @@ class InstagramAccountSummary:
 
 
 @dataclass
+class InstagramPostSummary:
+    id: str
+    caption: str
+    created_time: str
+    permalink_url: str
+    media_type: str  # REEL, CAROUSEL, IMAGE
+    views: int = 0
+    reach: int = 0
+    likes: int = 0
+    comments: int = 0
+    saves: int = 0
+    shares: int = 0
+
+    @property
+    def total_interactions(self) -> int:
+        return self.likes + self.comments + self.saves + self.shares
+
+
+@dataclass
+class InstagramContentBreakdown:
+    total_posts: int = 0
+    reels_count: int = 0
+    reels_views: int = 0
+    carousels_count: int = 0
+    carousels_views: int = 0
+    images_count: int = 0
+    images_views: int = 0
+
+    @property
+    def reels_avg_views(self) -> int:
+        return round(self.reels_views / self.reels_count) if self.reels_count else 0
+
+    @property
+    def carousels_avg_views(self) -> int:
+        return round(self.carousels_views / self.carousels_count) if self.carousels_count else 0
+
+    @property
+    def images_avg_views(self) -> int:
+        return round(self.images_views / self.images_count) if self.images_count else 0
+
+
+@dataclass
+class InstagramReport:
+    account_id: str
+    username: str
+    name: str
+    followers: int
+    period_since: str
+    period_until: str
+    reach: int = 0
+    views: int = 0
+    interactions: int = 0
+    accounts_engaged: int = 0
+    top_posts: list[InstagramPostSummary] = field(default_factory=list)
+    content_breakdown: InstagramContentBreakdown = field(default_factory=InstagramContentBreakdown)
+    previous_period: InstagramReport | None = None
+
+    @property
+    def engagement_rate(self) -> float:
+        if not self.views:
+            return 0.0
+        return round((self.interactions / self.views) * 100, 2)
+
+    @property
+    def mom_followers(self) -> MetricComparison:
+        prev = self.previous_period.followers if self.previous_period else None
+        return _compare_metric(self.followers, prev)
+
+    @property
+    def mom_reach(self) -> MetricComparison:
+        prev = self.previous_period.reach if self.previous_period else None
+        return _compare_metric(self.reach, prev)
+
+    @property
+    def mom_views(self) -> MetricComparison:
+        prev = self.previous_period.views if self.previous_period else None
+        return _compare_metric(self.views, prev)
+
+    @property
+    def mom_interactions(self) -> MetricComparison:
+        prev = self.previous_period.interactions if self.previous_period else None
+        return _compare_metric(self.interactions, prev)
+
+    @property
+    def mom_engagement_rate(self) -> MetricComparison:
+        prev = self.previous_period.engagement_rate if self.previous_period else None
+        return _compare_metric(self.engagement_rate, prev)
+
+    @property
+    def mom_posts(self) -> MetricComparison:
+        prev = self.previous_period.content_breakdown.total_posts if self.previous_period else None
+        return _compare_metric(self.content_breakdown.total_posts, prev)
+
+
+@dataclass
 class PageReport:
     page_id: str
     page_name: str
@@ -158,6 +253,7 @@ class PageReport:
     content_breakdown: ContentBreakdown = field(default_factory=ContentBreakdown)
     previous_period: PageReport | None = None
     instagram: InstagramAccountSummary | None = None
+    instagram_report: InstagramReport | None = None
 
     @property
     def net_growth(self) -> int:
@@ -386,6 +482,142 @@ def generate_tips(report: PageReport) -> list[str]:
         tips.append(
             f"Instagram account @{report.instagram.username} is connected ({report.instagram.followers:,} followers). "
             f"Cross-posting top-performing Facebook Reels directly as Instagram Reels with relevant hashtags will maximize total Meta ecosystem reach."
+        )
+
+    return tips
+
+
+def build_instagram_report(account_id: str, username: str, name: str,
+                           followers: int, insights: dict, media_list: list[dict],
+                           since: str, until: str, top_n: int = 5) -> InstagramReport:
+    report = InstagramReport(
+        account_id=account_id,
+        username=username,
+        name=name or username,
+        followers=followers,
+        period_since=since,
+        period_until=until,
+        reach=int(insights.get("reach", 0) or 0),
+        views=int(insights.get("views", 0) or 0),
+        interactions=int(insights.get("total_interactions", 0) or 0),
+        accounts_engaged=int(insights.get("accounts_engaged", 0) or 0),
+    )
+
+    summarized: list[InstagramPostSummary] = []
+    breakdown = InstagramContentBreakdown()
+
+    for m in media_list:
+        mtype_raw = (m.get("media_type") or "").upper()
+        prod_type = (m.get("media_product_type") or "").upper()
+        if mtype_raw == "VIDEO" or prod_type == "REELS":
+            ctype = "REEL"
+        elif mtype_raw == "CAROUSEL_ALBUM":
+            ctype = "CAROUSEL"
+        else:
+            ctype = "IMAGE"
+
+        views = int(m.get("ins_views", 0) or 0)
+        reach = int(m.get("ins_reach", 0) or 0)
+        likes = int(m.get("like_count", 0) or 0)
+        comments = int(m.get("comments_count", 0) or 0)
+        saves = int(m.get("ins_saved", 0) or 0)
+        shares = int(m.get("ins_shares", 0) or 0)
+
+        # Fallback if ins_views was 0: at least reach or likes + comments
+        if views == 0 and reach > 0:
+            views = reach
+        elif views == 0 and (likes + comments) > 0:
+            views = (likes + comments)
+
+        breakdown.total_posts += 1
+        if ctype == "REEL":
+            breakdown.reels_count += 1
+            breakdown.reels_views += views
+        elif ctype == "CAROUSEL":
+            breakdown.carousels_count += 1
+            breakdown.carousels_views += views
+        else:
+            breakdown.images_count += 1
+            breakdown.images_views += views
+
+        clean_cap = (m.get("caption") or "(no caption)").strip()
+        summarized.append(InstagramPostSummary(
+            id=m.get("id", ""),
+            caption=clean_cap[:140],
+            created_time=m.get("timestamp", ""),
+            permalink_url=m.get("permalink", ""),
+            media_type=ctype,
+            views=views,
+            reach=reach,
+            likes=likes,
+            comments=comments,
+            saves=saves,
+            shares=shares,
+        ))
+
+    report.content_breakdown = breakdown
+    if report.interactions == 0 and summarized:
+        report.interactions = sum(p.total_interactions for p in summarized)
+
+    summarized.sort(key=lambda p: (p.views, p.total_interactions), reverse=True)
+    report.top_posts = summarized[:top_n]
+    return report
+
+
+def generate_instagram_tips(report: InstagramReport) -> list[str]:
+    tips = []
+    cb = report.content_breakdown
+
+    # 1. MoM Views / Reach Trend
+    if report.previous_period:
+        mom_views = report.mom_views
+        if mom_views.pct_change is not None:
+            if mom_views.pct_change >= 10:
+                tips.append(
+                    f"Instagram views surged by {mom_views.formatted_pct} MoM ({report.views:,} vs "
+                    f"{report.previous_period.views:,}). Maintain the current visual style and posting cadence."
+                )
+            elif mom_views.pct_change <= -10:
+                tips.append(
+                    f"Instagram views dropped {mom_views.formatted_pct} MoM. Test posting during high-activity hours "
+                    "(12:00-14:00 and 19:00-21:00) and use relevant niche hashtags to regain discovery."
+                )
+
+    # 2. Format Distribution
+    if cb.reels_count > 0 and (cb.reels_avg_views >= cb.images_avg_views and cb.reels_avg_views >= cb.carousels_avg_views):
+        tips.append(
+            f"Instagram Reels generated the highest average exposure ({cb.reels_avg_views:,} views/reel). "
+            "Prioritize vertical 9:16 short video reels with trending audio for rapid reach growth."
+        )
+    elif cb.carousels_count > 0 and cb.carousels_avg_views > cb.reels_avg_views:
+        tips.append(
+            f"Multi-slide Carousels outperformed single posts with {cb.carousels_avg_views:,} average views. "
+            "Carousels create multiple impressions as users scroll back to see missed slides."
+        )
+    elif cb.reels_count == 0 and cb.total_posts > 0:
+        tips.append(
+            "No Reels were posted to Instagram this month. Short-form vertical video receives maximum algorithm "
+            "recommendation from Meta — aim to introduce at least 2-3 Reels per week."
+        )
+
+    # 3. Engagement & Conversion
+    if report.engagement_rate >= 3.0:
+        tips.append(
+            f"Strong Instagram engagement rate of {report.engagement_rate}%. Your followers are actively interacting; "
+            "pin your top 3 posts to the profile grid and include clear bio links."
+        )
+    else:
+        tips.append(
+            f"Engagement rate is {report.engagement_rate}%. Encourage comments and saves by asking specific questions "
+            "in captions and adding 'Save this for later' call-to-actions on carousel posts."
+        )
+
+    # 4. Top Post
+    if report.top_posts:
+        best = report.top_posts[0]
+        tips.append(
+            f"Top Instagram post was a {best.media_type.title()} with {best.views:,} views and {best.total_interactions:,} "
+            "interactions. Replicate this theme and format for future high-intent posts."
         )
 
     return tips

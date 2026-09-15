@@ -2,12 +2,13 @@
 Usage:
     python deploy.py
 """
-import sys
+from pathlib import Path
 import paramiko
 
 VPS_HOST = "93.127.206.52"
 VPS_USER = "root"
 VPS_PASS = "Royal300@2026"
+REMOTE_ENV_PATH = "/var/www/royal300_monthly_report/.env"
 
 def main():
     print(f"[*] Connecting to VPS {VPS_HOST} as {VPS_USER}...")
@@ -17,6 +18,15 @@ def main():
     try:
         client.connect(VPS_HOST, username=VPS_USER, password=VPS_PASS, timeout=15)
         print("[+] Connected successfully.")
+
+        # Sync local .env to VPS
+        local_env = Path(__file__).parent / ".env"
+        if local_env.exists():
+            print("[*] Uploading latest .env credentials to VPS...")
+            sftp = client.open_sftp()
+            sftp.put(str(local_env), REMOTE_ENV_PATH)
+            sftp.close()
+            print("[+] .env credentials synced successfully.")
 
         print("[*] Triggering git pull, dependency check, and service restart...")
         cmd = "bash /root/deploy_royal300_monthly_report.sh && systemctl is-active royal300_monthly_report_gunicorn.service"

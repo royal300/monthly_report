@@ -8,7 +8,7 @@ from pathlib import Path
 from config import OUTPUT_DIR
 from graph_api import GraphAPIClient
 from pdf_report import render_report
-from report_data import build_ad_account_report, build_page_report
+from report_data import build_ad_account_report, build_page_report, build_instagram_report
 
 
 def previous_month_range(today: date | None = None) -> tuple[str, str]:
@@ -84,6 +84,51 @@ def generate_report(page_id: str, page_name: str, client_name: str | None = None
         report.previous_period = prev_report
     except Exception as e:
         print(f"Warning: could not fetch previous month ({prev_since} to {prev_until}): {e}")
+
+    # Fetch Instagram analytics if linked
+    ig_obj = page_info.get("instagram_business_account")
+    if ig_obj and ig_obj.get("id"):
+        ig_id = str(ig_obj["id"])
+        ig_handle = str(ig_obj.get("username", ""))
+        ig_name = str(ig_obj.get("name", "") or ig_handle)
+        ig_fans = int(ig_obj.get("followers_count", 0) or 0)
+
+        try:
+            # Current month Instagram insights & media
+            ig_insights = client.get_instagram_insights(ig_id, since, until)
+            ig_media = client.get_instagram_media_with_insights(ig_id, since, until)
+            ig_report = build_instagram_report(
+                account_id=ig_id,
+                username=ig_handle,
+                name=ig_name,
+                followers=ig_fans,
+                insights=ig_insights,
+                media_list=ig_media,
+                since=since,
+                until=until,
+            )
+
+            # Previous month Instagram insights & media for MoM comparison
+            try:
+                prev_ig_insights = client.get_instagram_insights(ig_id, prev_since, prev_until)
+                prev_ig_media = client.get_instagram_media_with_insights(ig_id, prev_since, prev_until)
+                prev_ig_report = build_instagram_report(
+                    account_id=ig_id,
+                    username=ig_handle,
+                    name=ig_name,
+                    followers=ig_fans,
+                    insights=prev_ig_insights,
+                    media_list=prev_ig_media,
+                    since=prev_since,
+                    until=prev_until,
+                )
+                ig_report.previous_period = prev_ig_report
+            except Exception as e_prev_ig:
+                print(f"Notice: Previous month Instagram fetch failed: {e_prev_ig}")
+
+            report.instagram_report = ig_report
+        except Exception as e_ig:
+            print(f"Notice: Instagram analytics retrieval failed: {e_ig}")
 
     ad_report = None
     if ad_account_id:

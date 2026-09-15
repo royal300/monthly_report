@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import time
+from datetime import date, datetime, time as dt_time, timedelta, timezone
 from typing import Any
 
 import requests
@@ -104,6 +105,79 @@ class GraphAPIClient:
             )
         except Exception:
             return None
+
+    def get_instagram_insights(self, ig_id: str, since: str, until: str) -> dict:
+        """Fetches total reach, views, interactions, and accounts_engaged for [since, until].
+        Splits queries into <=15 day chunks to adhere to Meta's strict 30-day window limit.
+        """
+        metrics = "reach,views,total_interactions,accounts_engaged"
+        combined = {"reach": 0, "views": 0, "total_interactions": 0, "accounts_engaged": 0}
+
+        try:
+            start_d = date.fromisoformat(since)
+            end_d = date.fromisoformat(until)
+        except Exception:
+            return combined
+
+        cur = start_d
+        while cur <= end_d:
+            nxt = min(cur + timedelta(days=14), end_d)
+            ts_start = int(datetime.combine(cur, dt_time.min).replace(tzinfo=timezone.utc).timestamp())
+            ts_end = int(datetime.combine(nxt, dt_time.max).replace(tzinfo=timezone.utc).timestamp())
+            try:
+                data = self._get(
+                    f"{ig_id}/insights",
+                    {
+                        "metric": metrics,
+                        "metric_type": "total_value",
+                        "period": "day",
+                        "since": str(ts_start),
+                        "until": str(ts_end),
+                    },
+                )
+                for item in data.get("data", []):
+                    name = item.get("name")
+                    val = item.get("total_value", {}).get("value", 0) or 0
+                    if name in combined:
+                        combined[name] += val
+            except Exception as e:
+                print(f"Notice: IG insights chunk query ({cur} to {nxt}) failed: {e}")
+            cur = nxt + timedelta(days=1)
+
+        return combined
+
+    def get_instagram_media_with_insights(self, ig_id: str, since: str, until: str, limit: int = 50) -> list[dict]:
+        """Fetches Instagram media in [since, until] with view and interaction metrics."""
+        try:
+            data = self._get(
+                f"{ig_id}/media",
+                {
+                    "fields": (
+                        "id,caption,media_type,media_product_type,permalink,timestamp,"
+                        "like_count,comments_count"
+                    ),
+                    "limit": limit,
+                },
+            )
+        except Exception as e:
+            print(f"Notice: Instagram media query failed for {ig_id}: {e}")
+            return []
+
+        all_media = data.get("data", [])
+        filtered = []
+        for m in all_media:
+            ts = m.get("timestamp", "")
+            if ts and len(ts) >= 10:
+                pdate = ts[:10]
+                if since <= pdate <= until:
+                    try:
+                        m_ins = self._get(f"{m['id']}/insights", {"metric": "reach,views,saved,shares"})
+                        for item in m_ins.get("data", []):
+                            m[f"ins_{item.get('name')}"] = item.get("values", [{}])[0].get("value", 0) or 0
+                    except Exception:
+                        pass
+                    filtered.append(m)
+        return filtered
 
     def get_page_insights(self, page_id: str, since: str, until: str) -> dict:
         """since/until are YYYY-MM-DD. Returns raw insights payload.
