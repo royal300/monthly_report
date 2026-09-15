@@ -54,8 +54,16 @@ class GraphAPIClient:
     # ---- Discovery -------------------------------------------------
 
     def list_assigned_pages(self) -> list[dict]:
-        """Pages this system user has a role on (GET /me/accounts)."""
-        data = self._get("me/accounts", {"fields": "id,name,category,fan_count"})
+        """Pages this system user has a role on (GET /me/accounts) along with connected Instagram Business Accounts."""
+        data = self._get(
+            "me/accounts",
+            {
+                "fields": (
+                    "id,name,category,fan_count,"
+                    "instagram_business_account{id,username,name,followers_count,media_count,profile_picture_url}"
+                )
+            },
+        )
         return data.get("data", [])
 
     def get_page_access_token(self, page_id: str) -> str:
@@ -72,10 +80,30 @@ class GraphAPIClient:
             "check the system user is assigned to this page."
         )
 
-    # ---- Page metrics ------------------------------------------------
+    # ---- Page & Instagram metrics ------------------------------------
 
     def get_page_info(self, page_id: str) -> dict:
-        return self._get(page_id, {"fields": "id,name,fan_count,followers_count"})
+        return self._get(
+            page_id,
+            {
+                "fields": (
+                    "id,name,fan_count,followers_count,"
+                    "instagram_business_account{id,username,name,followers_count,follows_count,media_count,biography,profile_picture_url}"
+                )
+            },
+        )
+
+    def get_instagram_account_info(self, ig_id: str) -> dict | None:
+        """Safely fetch Instagram business profile details."""
+        try:
+            return self._get(
+                ig_id,
+                {
+                    "fields": "id,username,name,followers_count,follows_count,media_count,biography,profile_picture_url"
+                },
+            )
+        except Exception:
+            return None
 
     def get_page_insights(self, page_id: str, since: str, until: str) -> dict:
         """since/until are YYYY-MM-DD. Returns raw insights payload.
@@ -121,13 +149,21 @@ class GraphAPIClient:
 
         try:
             data = self._get(f"{page_id}/posts", params)
-        except GraphAPIError as e:
-            # If Meta asks to reduce the amount of data, automatically retry with limit=10
-            if "reduce the amount of data" in str(e).lower() and limit > 10:
+        except GraphAPIError:
+            # If Meta asks to reduce the amount of data or hits unexpected error, retry with limit=10
+            try:
                 params["limit"] = 10
                 data = self._get(f"{page_id}/posts", params)
-            else:
-                raise
+            except GraphAPIError:
+                # If nested insights metric is failing on this page, fetch without it as fallback
+                params["fields"] = (
+                    "id,message,created_time,permalink_url,status_type,"
+                    "attachments{media_type,type,url},"
+                    "reactions.summary(true).limit(0),"
+                    "comments.summary(true).limit(0),"
+                    "shares"
+                )
+                data = self._get(f"{page_id}/posts", params)
 
         posts = data.get("data", [])
 
@@ -135,13 +171,19 @@ class GraphAPIClient:
         next_url = data.get("paging", {}).get("next")
         pages_fetched = 1
         while next_url and pages_fetched < 10:
-            resp = self.session.get(next_url, timeout=30)
-            if resp.status_code == 200:
-                page_data = resp.json()
-                posts.extend(page_data.get("data", []))
-                next_url = page_data.get("paging", {}).get("next")
-                pages_fetched += 1
-            else:
+            try:
+                resp = self.session.get(next_url, timeout=30)
+                if resp.status_code == 200:
+                    page_data = resp.json()
+                    new_posts = page_data.get("data", [])
+                    if not new_posts:
+                        break
+                    posts.extend(new_posts)
+                    next_url = page_data.get("paging", {}).get("next")
+                    pages_fetched += 1
+                else:
+                    break
+            except Exception:
                 break
 
         return posts

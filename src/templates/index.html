@@ -274,6 +274,14 @@
     font-size: 12px;
     font-weight: 700;
   }
+  .client-badge.ig-badge {
+    background: linear-gradient(135deg, rgba(225, 48, 108, 0.18), rgba(131, 58, 180, 0.18));
+    border: 1px solid rgba(225, 48, 108, 0.4);
+    color: #fb7185;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
 
   /* Month Preset Chips */
   .month-control-wrap {
@@ -736,8 +744,12 @@
         <select class="custom-select" id="pageSelect" name="page_id" required>
           <option value="" disabled selected>-- Select a Client Facebook Page --</option>
           {% for p in pages %}
-          <option value="{{ p.page_id }}" data-name="{{ p.label }}" data-fans="{{ p.fans or 0 }}">
-            {{ p.label }} {% if p.fans %}&bull; {{ "{:,}".format(p.fans) }} followers{% endif %}
+          <option value="{{ p.page_id }}"
+                  data-name="{{ p.label }}"
+                  data-fans="{{ p.fans or 0 }}"
+                  data-ig-handle="{{ p.instagram.username if p.instagram else '' }}"
+                  data-ig-followers="{{ p.instagram.followers_count if p.instagram else 0 }}">
+            {{ p.label }} {% if p.fans %}&bull; {{ "{:,}".format(p.fans) }} FB{% endif %}{% if p.instagram %} &bull; &#64;{{ p.instagram.username }} (IG){% endif %}
           </option>
           {% endfor %}
         </select>
@@ -748,7 +760,10 @@
             <span class="client-name-display" id="previewName">No client selected</span>
             <span class="client-id-display" id="previewId">Select a page above</span>
           </div>
-          <span class="client-badge" id="previewFans">Awaiting selection</span>
+          <div class="client-badges-group" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <span class="client-badge" id="previewFans">Awaiting selection</span>
+            <span class="client-badge ig-badge" id="previewIg" style="display: none;"></span>
+          </div>
         </div>
       </div>
 
@@ -894,6 +909,7 @@
     const previewName = document.getElementById('previewName');
     const previewId = document.getElementById('previewId');
     const previewFans = document.getElementById('previewFans');
+    const previewIg = document.getElementById('previewIg');
     const helperNote = document.getElementById('helperNote');
 
     // Report Ready Card & Modal Elements
@@ -968,10 +984,20 @@
         previewId.textContent = 'Page ID: ' + opt.value;
         const fans = Number(opt.getAttribute('data-fans') || 0);
         previewFans.textContent = fans > 0 ? fans.toLocaleString() + ' followers' : 'Page Active';
+
+        const igHandle = opt.getAttribute('data-ig-handle');
+        const igFollowers = Number(opt.getAttribute('data-ig-followers') || 0);
+        if (igHandle && previewIg) {
+          previewIg.innerHTML = `📸 @${igHandle} &bull; ${igFollowers.toLocaleString()} IG`;
+          previewIg.style.display = 'inline-flex';
+        } else if (previewIg) {
+          previewIg.style.display = 'none';
+        }
       } else {
         previewName.textContent = 'No client selected';
         previewId.textContent = 'Select a page above';
         previewFans.textContent = 'Awaiting selection';
+        if (previewIg) previewIg.style.display = 'none';
       }
     }
     select.addEventListener('change', () => {
@@ -1053,7 +1079,15 @@
             opt.value = p.page_id;
             opt.setAttribute('data-name', p.label);
             opt.setAttribute('data-fans', p.fans || 0);
-            opt.textContent = `${p.label} ${p.fans ? '• ' + Number(p.fans).toLocaleString() + ' followers' : ''}`;
+            if (p.instagram) {
+              opt.setAttribute('data-ig-handle', p.instagram.username || '');
+              opt.setAttribute('data-ig-followers', p.instagram.followers_count || 0);
+              opt.textContent = `${p.label} ${p.fans ? '• ' + Number(p.fans).toLocaleString() + ' FB' : ''} • @${p.instagram.username} (IG)`;
+            } else {
+              opt.setAttribute('data-ig-handle', '');
+              opt.setAttribute('data-ig-followers', '0');
+              opt.textContent = `${p.label} ${p.fans ? '• ' + Number(p.fans).toLocaleString() + ' followers' : ''}`;
+            }
             select.appendChild(opt);
           });
           updatePreview();

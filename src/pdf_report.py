@@ -173,9 +173,12 @@ def render_report(report: PageReport, output_path: Path, ad_report: AdAccountRep
 
     pdf.set_font("Helvetica", "B", 10)
     pdf.set_text_color(*ACCENT)
-    pdf.cell(0, 5, "MONTHLY FACEBOOK PERFORMANCE REPORT", ln=True)
+    if report.instagram:
+        pdf.cell(0, 5, "MONTHLY META (FACEBOOK & INSTAGRAM) PERFORMANCE REPORT", ln=True)
+    else:
+        pdf.cell(0, 5, "MONTHLY FACEBOOK PERFORMANCE REPORT", ln=True)
 
-    pdf.set_font("Helvetica", "", 9)
+    pdf.set_font("Helvetica", "", 8.5)
     pdf.set_text_color(*GREY)
     since_dmy = _format_date_dmy(report.period_since)
     until_dmy = _format_date_dmy(report.period_until)
@@ -184,8 +187,16 @@ def render_report(report: PageReport, output_path: Path, ad_report: AdAccountRep
         prev_since_dmy = _format_date_dmy(report.previous_period.period_since)
         prev_until_dmy = _format_date_dmy(report.previous_period.period_until)
         prev_txt = f" (Comparison: {prev_since_dmy} to {prev_until_dmy})"
-    pdf.cell(0, 5, f"Reporting Period: {since_dmy} to {until_dmy}{prev_txt}", ln=True)
-    pdf.ln(5)
+    pdf.cell(0, 4.5, f"Reporting Period: {since_dmy} to {until_dmy}{prev_txt}", ln=True)
+
+    if report.instagram:
+        pdf.set_font("Helvetica", "B", 8)
+        pdf.set_text_color(193, 53, 132)  # Instagram brand color
+        ig_text = f"Connected Instagram: @{report.instagram.username}  |  Followers: {report.instagram.followers:,}  |  Published Media: {report.instagram.media_count:,}"
+        pdf.cell(0, 4.5, _sanitize(ig_text), ln=True)
+        pdf.ln(2)
+    else:
+        pdf.ln(5)
 
     # --- 1. KPI Scorecard (4 Cards) ---
     kpi_y = pdf.get_y()

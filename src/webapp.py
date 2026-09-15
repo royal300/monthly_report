@@ -30,6 +30,7 @@ def load_available_pages() -> list[dict]:
                     "page_id": str(p["id"]),
                     "label": p.get("name", "Unnamed Page"),
                     "fans": p.get("fan_count", 0),
+                    "instagram": p.get("instagram_business_account"),
                 }
                 for p in raw_pages
             ]
@@ -37,9 +38,9 @@ def load_available_pages() -> list[dict]:
         print(f"Notice: Failed to fetch live pages ({e}), falling back to cache.")
 
     return [
-        {"page_id": "127586478173741", "label": "Happy Valley Park", "fans": 48733},
-        {"page_id": "1149414344915545", "label": "Floriza - Skin & Hair Clinic", "fans": 70},
-        {"page_id": "105034859277727", "label": "ROYAL 300", "fans": 28},
+        {"page_id": "127586478173741", "label": "Happy Valley Park", "fans": 48733, "instagram": None},
+        {"page_id": "1149414344915545", "label": "Floriza - Skin & Hair Clinic", "fans": 70, "instagram": None},
+        {"page_id": "105034859277727", "label": "ROYAL 300", "fans": 28, "instagram": {"id": "17841459605462103", "username": "_royal300", "name": "Royal 300", "followers_count": 520, "media_count": 0}},
     ]
 
 

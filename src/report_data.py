@@ -134,6 +134,16 @@ def _compare_metric(current: float | int, previous: float | int | None) -> Metri
 
 
 @dataclass
+class InstagramAccountSummary:
+    id: str
+    username: str
+    name: str = ""
+    followers: int = 0
+    media_count: int = 0
+    biography: str = ""
+
+
+@dataclass
 class PageReport:
     page_id: str
     page_name: str
@@ -147,6 +157,7 @@ class PageReport:
     top_posts: list[PostSummary] = field(default_factory=list)
     content_breakdown: ContentBreakdown = field(default_factory=ContentBreakdown)
     previous_period: PageReport | None = None
+    instagram: InstagramAccountSummary | None = None
 
     @property
     def net_growth(self) -> int:
@@ -203,12 +214,25 @@ class AdAccountReport:
 
 def build_page_report(page_id: str, page_name: str, page_info: dict,
                        insights_payload: dict, posts: list[dict],
-                       since: str, until: str, top_n: int = 5) -> PageReport:
+                       since: str, until: str, top_n: int = 5,
+                       instagram_data: dict | None = None) -> PageReport:
     # 1. Followers: Use the exact snapshot at month-end from page_follows if present,
     # otherwise fallback to live page_info
     month_end_followers = _last_snapshot_metric(insights_payload, "page_follows")
     if month_end_followers is None:
         month_end_followers = page_info.get("followers_count") or page_info.get("fan_count") or 0
+
+    ig_raw = instagram_data or page_info.get("instagram_business_account")
+    ig_summary = None
+    if ig_raw and isinstance(ig_raw, dict) and ig_raw.get("id"):
+        ig_summary = InstagramAccountSummary(
+            id=str(ig_raw.get("id", "")),
+            username=str(ig_raw.get("username", "")),
+            name=str(ig_raw.get("name", "") or ig_raw.get("username", "")),
+            followers=int(ig_raw.get("followers_count", 0) or 0),
+            media_count=int(ig_raw.get("media_count", 0) or 0),
+            biography=str(ig_raw.get("biography", "") or ""),
+        )
 
     report = PageReport(
         page_id=page_id,
@@ -218,6 +242,7 @@ def build_page_report(page_id: str, page_name: str, page_info: dict,
         period_until=until,
         impressions=_sum_metric(insights_payload, "page_total_media_view_unique"),
         follower_delta=_delta_metric(insights_payload, "page_follows"),
+        instagram=ig_summary,
     )
 
     summarized: list[PostSummary] = []
@@ -354,6 +379,13 @@ def generate_tips(report: PageReport) -> list[str]:
         tips.append(
             f"Top post of the month was a {type_label} with {best.impressions:,} views and {best.engaged_users:,} "
             f"interactions. Analyze its hook and structure to replicate in upcoming content."
+        )
+
+    # 5. Connected Instagram Synergy
+    if report.instagram:
+        tips.append(
+            f"Instagram account @{report.instagram.username} is connected ({report.instagram.followers:,} followers). "
+            f"Cross-posting top-performing Facebook Reels directly as Instagram Reels with relevant hashtags will maximize total Meta ecosystem reach."
         )
 
     return tips
