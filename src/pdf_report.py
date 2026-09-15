@@ -29,6 +29,17 @@ def _sanitize(text: str) -> str:
     return clean.encode("latin-1", errors="ignore").decode("latin-1")
 
 
+def _format_date_dmy(date_str: str) -> str:
+    """Converts YYYY-MM-DD or ISO timestamp to DD/MM/YYYY."""
+    if not date_str:
+        return ""
+    clean = str(date_str).strip()[:10]
+    parts = clean.split("-")
+    if len(parts) == 3 and len(parts[0]) == 4:
+        return f"{parts[2]}/{parts[1]}/{parts[0]}"
+    return clean
+
+
 def _generate_content_pie_chart(cb, temp_dir: Path) -> Path | None:
     """Generates a high-resolution, modern donut pie chart for the content ratio."""
     if cb.total_posts == 0:
@@ -166,8 +177,14 @@ def render_report(report: PageReport, output_path: Path, ad_report: AdAccountRep
 
     pdf.set_font("Helvetica", "", 9)
     pdf.set_text_color(*GREY)
-    prev_txt = f" (Comparison: {report.previous_period.period_since} to {report.previous_period.period_until})" if report.previous_period else ""
-    pdf.cell(0, 5, f"Reporting Period: {report.period_since} to {report.period_until}{prev_txt}", ln=True)
+    since_dmy = _format_date_dmy(report.period_since)
+    until_dmy = _format_date_dmy(report.period_until)
+    prev_txt = ""
+    if report.previous_period:
+        prev_since_dmy = _format_date_dmy(report.previous_period.period_since)
+        prev_until_dmy = _format_date_dmy(report.previous_period.period_until)
+        prev_txt = f" (Comparison: {prev_since_dmy} to {prev_until_dmy})"
+    pdf.cell(0, 5, f"Reporting Period: {since_dmy} to {until_dmy}{prev_txt}", ln=True)
     pdf.ln(5)
 
     # --- 1. KPI Scorecard (4 Cards) ---
@@ -436,10 +453,13 @@ def render_report(report: PageReport, output_path: Path, ad_report: AdAccountRep
             pdf.set_font("Helvetica", "B", 7.5)
             pdf.cell(col_w[1], 10, f"[{type_label}]", border=0, fill=fill)
 
-            # Caption (truncated)
+            # Caption (truncated) with published date in DD/MM/YYYY
             pdf.set_font("Helvetica", "", 7.5)
             pdf.set_text_color(*NAVY)
-            caption = _sanitize(post.message[:50]) + ("..." if len(post.message) > 50 else "")
+            post_date = _format_date_dmy(post.created_time) if post.created_time else ""
+            date_prefix = f"[{post_date}] " if post_date else ""
+            clean_msg = _sanitize(post.message[:45]) + ("..." if len(post.message) > 45 else "")
+            caption = f"{date_prefix}{clean_msg}" if clean_msg else (f"[{post_date}] Post update" if post_date else "Post update")
             pdf.cell(col_w[2], 10, caption, border=0, fill=fill)
 
             # Impressions

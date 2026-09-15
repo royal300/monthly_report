@@ -12,6 +12,7 @@ from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_file
 
+from config import OUTPUT_DIR
 from graph_api import GraphAPIClient
 from report_service import generate_report, previous_month_range
 
@@ -83,10 +84,52 @@ def generate():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+    # If client requested JSON / AJAX, return file metadata and URLs
+    if (
+        request.headers.get("Accept") == "application/json"
+        or request.args.get("format") == "json"
+        or request.form.get("format") == "json"
+        or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    ):
+        return jsonify({
+            "success": True,
+            "filename": pdf_path.name,
+            "view_url": f"/view/{pdf_path.name}",
+            "download_url": f"/download/{pdf_path.name}",
+            "page_name": page_name,
+        })
+
     return send_file(
         pdf_path,
         as_attachment=True,
         download_name=pdf_path.name,
+        mimetype="application/pdf",
+    )
+
+
+@app.route("/view/<path:filename>")
+def view_pdf(filename: str):
+    """Inline view of PDF for the in-app preview modal and browser viewing."""
+    pdf_path = (OUTPUT_DIR / filename).resolve()
+    if not pdf_path.is_relative_to(OUTPUT_DIR.resolve()) or not pdf_path.exists():
+        return jsonify({"error": "Report file not found."}), 404
+    return send_file(
+        pdf_path,
+        as_attachment=False,
+        mimetype="application/pdf",
+    )
+
+
+@app.route("/download/<path:filename>")
+def download_pdf(filename: str):
+    """Forced attachment download of PDF."""
+    pdf_path = (OUTPUT_DIR / filename).resolve()
+    if not pdf_path.is_relative_to(OUTPUT_DIR.resolve()) or not pdf_path.exists():
+        return jsonify({"error": "Report file not found."}), 404
+    return send_file(
+        pdf_path,
+        as_attachment=True,
+        download_name=filename,
         mimetype="application/pdf",
     )
 
