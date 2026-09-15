@@ -146,8 +146,10 @@ class GraphAPIClient:
 
         return combined
 
-    def get_instagram_media_with_insights(self, ig_id: str, since: str, until: str, limit: int = 50) -> list[dict]:
-        """Fetches Instagram media in [since, until] with view and interaction metrics."""
+    def get_instagram_media_with_insights(self, ig_id: str, since: str, until: str, limit: int = 30) -> list[dict]:
+        """Fetches Instagram media in [since, until] with view and interaction metrics.
+        Optimized to fetch individual media insights only for top candidates to prevent latency/timeouts.
+        """
         try:
             data = self._get(
                 f"{ig_id}/media",
@@ -170,13 +172,23 @@ class GraphAPIClient:
             if ts and len(ts) >= 10:
                 pdate = ts[:10]
                 if since <= pdate <= until:
-                    try:
-                        m_ins = self._get(f"{m['id']}/insights", {"metric": "reach,views,saved,shares"})
-                        for item in m_ins.get("data", []):
-                            m[f"ins_{item.get('name')}"] = item.get("values", [{}])[0].get("value", 0) or 0
-                    except Exception:
-                        pass
                     filtered.append(m)
+
+        # Sort candidate posts by known interactions to prioritize top posts for insights queries
+        filtered.sort(
+            key=lambda m: (int(m.get("like_count", 0) or 0) + int(m.get("comments_count", 0) or 0)),
+            reverse=True,
+        )
+
+        # Fetch detailed media-level insights only for top 5 candidates
+        for m in filtered[:5]:
+            try:
+                m_ins = self._get(f"{m['id']}/insights", {"metric": "reach,views,saved,shares"})
+                for item in m_ins.get("data", []):
+                    m[f"ins_{item.get('name')}"] = item.get("values", [{}])[0].get("value", 0) or 0
+            except Exception:
+                pass
+
         return filtered
 
     def get_page_insights(self, page_id: str, since: str, until: str) -> dict:
