@@ -291,11 +291,26 @@
     font-size: 14px;
     font-family: inherit;
     outline: none;
+    cursor: pointer;
+    color-scheme: dark;
     transition: all 0.2s;
   }
   .month-input:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+  }
+  .month-input::-webkit-calendar-picker-indicator {
+    filter: brightness(0) invert(1);
+    cursor: pointer;
+    opacity: 0.9;
+    font-size: 16px;
+    padding: 2px;
+    border-radius: 4px;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+  .month-input::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+    transform: scale(1.1);
   }
   .preset-chip {
     background: rgba(255, 255, 255, 0.05);
@@ -675,6 +690,35 @@
     });
     monthInput.addEventListener('input', validateForm);
     monthInput.addEventListener('change', validateForm);
+
+    // Open month picker calendar when clicking anywhere on the month selector tab
+    monthInput.addEventListener('click', () => {
+      try {
+        if (typeof monthInput.showPicker === 'function') {
+          monthInput.showPicker();
+        }
+      } catch (err) {
+        // Safe catch if picker is already open or not supported
+      }
+    });
+
+    const monthLabel = document.querySelector('label[for="monthInput"]');
+    if (monthLabel) {
+      monthLabel.style.cursor = 'pointer';
+      monthLabel.addEventListener('click', (e) => {
+        e.preventDefault();
+        try {
+          if (typeof monthInput.showPicker === 'function') {
+            monthInput.showPicker();
+          } else {
+            monthInput.focus();
+          }
+        } catch (err) {
+          monthInput.focus();
+        }
+      });
+    }
+
     updatePreview();
     validateForm();
 
